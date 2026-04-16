@@ -1,12 +1,23 @@
 #!/bin/bash
-# Фикс: патч iplink.c - убрать CAN support (несовместим с ядром 3.4)
-cd padavan-ng/trunk
-find . -name "iplink.c" -path "*/busybox*" | while read f; do
-  sed -i '/do_set_can/,/^}/{ s/CAN_CTRLMODE_FD_NON_ISO/0x08/g; s/CAN_CTRLMODE_FD/0x04/g; s/CAN_CTRLMODE_PRESUME_ACK/0x40/g; s/IFLA_CAN_TERMINATION/999/g; }' "$f"
-done
-
-# Универсальный фикс: добавить все недостающие define в заголовок
-find . -name "iplink.c" -path "*/busybox*" | while read f; do
-  sed -i '1i #ifndef CAN_CTRLMODE_FD\n#define CAN_CTRLMODE_FD 0x04\n#endif\n#ifndef CAN_CTRLMODE_FD_NON_ISO\n#define CAN_CTRLMODE_FD_NON_ISO 0x08\n#endif\n#ifndef CAN_CTRLMODE_PRESUME_ACK\n#define CAN_CTRLMODE_PRESUME_ACK 0x40\n#endif\n#ifndef IFLA_CAN_TERMINATION\n#define IFLA_CAN_TERMINATION 22\n#endif' "$f"
-done
-cd ../..
+# Фикс: добавить недостающие CAN/IFLA define в исходник iplink.c
+# Ядро 3.4 MT7628 не содержит этих определений
+IPLINK="padavan-ng/trunk/user/busybox/busybox-1.37.0/networking/libiproute/iplink.c"
+if [ -f "$IPLINK" ]; then
+  cat > /tmp/can_fix.h << 'EOF'
+#ifndef CAN_CTRLMODE_FD
+#define CAN_CTRLMODE_FD 0x04
+#endif
+#ifndef CAN_CTRLMODE_FD_NON_ISO
+#define CAN_CTRLMODE_FD_NON_ISO 0x08
+#endif
+#ifndef CAN_CTRLMODE_PRESUME_ACK
+#define CAN_CTRLMODE_PRESUME_ACK 0x40
+#endif
+#ifndef IFLA_CAN_TERMINATION
+#define IFLA_CAN_TERMINATION 22
+#endif
+EOF
+  cat /tmp/can_fix.h "$IPLINK" > /tmp/iplink_fixed.c
+  cp /tmp/iplink_fixed.c "$IPLINK"
+  echo "Patched iplink.c with CAN defines"
+fi
