@@ -1,6 +1,5 @@
 #!/bin/bash
-# Фикс: добавить недостающие CAN/IFLA define в исходник iplink.c
-# Ядро 3.4 MT7628 не содержит этих определений
+# Фикс 1: CAN defines для ядра 3.4
 IPLINK="padavan-ng/trunk/user/busybox/busybox-1.37.0/networking/libiproute/iplink.c"
 if [ -f "$IPLINK" ]; then
   cat > /tmp/can_fix.h << 'EOF'
@@ -21,3 +20,14 @@ EOF
   cp /tmp/iplink_fixed.c "$IPLINK"
   echo "Patched iplink.c with CAN defines"
 fi
+
+# Фикс 2: ProductID MI-4A_100M -> MI-4A-100M
+BOARD_H="padavan-ng/trunk/configs/boards/XIAOMI/MI-4A_100M/board.h"
+if [ -f "$BOARD_H" ]; then
+  sed -i 's/MI-4A_100M/MI-4A-100M/g' "$BOARD_H"
+  echo "Patched board.h ProductID"
+fi
+# Также в .config если он уже сгенерирован
+find padavan-ng/trunk -name ".config" -maxdepth 1 | while read f; do
+  sed -i 's/MI-4A_100M/MI-4A-100M/g' "$f"
+done
